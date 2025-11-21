@@ -81,6 +81,24 @@
             display: none;
         }
         
+        .progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background-color: rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+        
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            width: 0%;
+            transition: width 0.1s linear;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+        
         .message {
             color: white;
             font-size: 24px;
@@ -107,8 +125,12 @@
             
             <div class="controls">
                 <button onclick="changeSlide(-1)">❮ Previous</button>
-                <button id="playPauseBtn" onclick="togglePlayPause()">⏸ Pause</button>
+                <button id="playPauseBtn" onclick="togglePlayPause">⏸ Pause</button>
                 <button onclick="changeSlide(1)">Next ❯</button>
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress-bar-fill" id="progressBar"></div>
             </div>
         {% else %}
             <div class="message">
@@ -126,9 +148,12 @@
         const DEFAULT_DURATION_MS = parseInt(document.body.getAttribute('data-default-duration'), 10);
         const controls = document.querySelector('.controls');
         const container = document.querySelector('.slideshow-container');
+        const progressBar = document.getElementById('progressBar');
         let hideControlsTimeout = null;
         let hideCursorTimeout = null;
         const HIDE_DELAY = 2000; // ms
+        let countdownInterval = null;
+        let remainingTime = 0;
 
         function activityDetected() {
             // Hiện controls
@@ -164,10 +189,12 @@
             document.getElementById('currentSlide').textContent = currentSlide + 1;
         }
 
-        function changeSlide(direction) {
+        function changeSlide(direction, isManual = true) {
             showSlide(currentSlide + direction);
             scheduleNext();
-            activityDetected();
+            if (isManual) {
+                activityDetected();
+            }
         }
 
         function togglePlayPause() {
@@ -189,18 +216,39 @@
                 clearTimeout(nextTimeoutId);
                 nextTimeoutId = null;
             }
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+        }
+
+        function updateProgressBar(totalDuration) {
+            if (remainingTime > 0) {
+                remainingTime -= 100;
+                const elapsed = totalDuration - remainingTime;
+                const percentage = (elapsed / totalDuration) * 100;
+                if (progressBar) {
+                    progressBar.style.width = percentage + '%';
+                }
+            }
         }
 
         function scheduleNext() {
             cancelNext();
-            if (!autoPlay || totalSlides === 0) return;
+            if (!autoPlay || totalSlides === 0) {
+                if (progressBar) progressBar.style.width = '0%';
+                return;
+            }
             const active = slides[currentSlide];
             let durationMs = parseInt(active.getAttribute('data-duration'), 10);
             if (isNaN(durationMs) || durationMs <= 0) {
                 durationMs = DEFAULT_DURATION_MS;
             }
+            remainingTime = durationMs;
+            if (progressBar) progressBar.style.width = '0%';
+            countdownInterval = setInterval(() => updateProgressBar(durationMs), 100);
             nextTimeoutId = setTimeout(() => {
-                changeSlide(1);
+                changeSlide(1, false);
             }, durationMs);
         }
 

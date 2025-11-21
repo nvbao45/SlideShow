@@ -9,7 +9,7 @@ app.secret_key = 'your-secret-key-change-this-in-production'
 
 PHOTOS_FOLDER = 'photos'
 DURATIONS_FILE = 'durations.json'
-DEFAULT_DURATION_SECONDS = 8  # default display time per image if not configured
+DEFAULT_DURATION_SECONDS = 8  # fallback default display time per image if not configured
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
 
 app.config['UPLOAD_FOLDER'] = PHOTOS_FOLDER
@@ -50,17 +50,32 @@ def save_durations(durations):
     except Exception:
         return False
 
+def load_default_duration():
+    if not os.path.exists(DURATIONS_FILE):
+        return DEFAULT_DURATION_SECONDS
+    try:
+        with open(DURATIONS_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            val = data.get('__default')
+            if isinstance(val, (int, float)) and val > 0:
+                return float(val)
+            return DEFAULT_DURATION_SECONDS
+    except Exception:
+        return DEFAULT_DURATION_SECONDS
+
 @app.route('/')
 def index():
     photos = get_photos()
     durations = load_durations()
-    return render_template('index.html', photos=photos, durations=durations, default_duration=DEFAULT_DURATION_SECONDS)
+    default_duration = load_default_duration()
+    return render_template('index.html', photos=photos, durations=durations, default_duration=default_duration)
 
 @app.route('/admin')
 def admin():
     photos = get_photos()
     durations = load_durations()
-    return render_template('admin.html', photos=photos, durations=durations, default_duration=DEFAULT_DURATION_SECONDS)
+    default_duration = load_default_duration()
+    return render_template('admin.html', photos=photos, durations=durations, default_duration=default_duration)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -99,8 +114,21 @@ def update_durations():
                         durations[filename] = sec
                 except ValueError:
                     continue
+    # Default duration update
+    default_value = request.form.get('default_duration')
+    if default_value:
+        try:
+            dv = float(default_value)
+            if dv > 0:
+                durations['__default'] = dv
+        except ValueError:
+            pass
     # Remove entries for deleted photos
-    durations = {k: v for k, v in durations.items() if k in photos}
+    cleaned = {}
+    for k, v in durations.items():
+        if k == '__default' or k in photos:
+            cleaned[k] = v
+    durations = cleaned
     if save_durations(durations):
         flash('Durations updated successfully')
     else:

@@ -207,8 +207,16 @@
         
         {% if photos %}
         <form action="/durations" method="post" style="margin-bottom:30px">
-            <h2>Per-Image Durations (seconds)</h2>
-            <p style="font-size:14px;color:#555">Leave blank (or &lt;=0) to use default ({{ default_duration }}s). Enter seconds (e.g. 5 or 7.5). Then click Save Durations below.</p>
+            <h2>Duration Settings</h2>
+            <fieldset style="border:1px solid #ddd;padding:15px;margin-bottom:20px;border-radius:6px">
+                <legend style="font-weight:bold;padding:0 8px">Default Duration</legend>
+                <label style="display:block;font-size:14px;color:#333;margin-bottom:8px">Default duration for images (seconds):
+                    <input type="number" step="0.1" min="0.1" name="default_duration" value="{{ '%.2f' % default_duration }}" style="width:200px;padding:6px;border:1px solid #ccc;border-radius:4px" />
+                </label>
+                <small style="color:#666">Applied to any image without a custom duration (must be &gt; 0).</small>
+            </fieldset>
+            <h3 style="margin-top:0">Per-Image Overrides</h3>
+            <p style="font-size:14px;color:#555">Leave blank (or &lt;=0) to fall back to default ({{ default_duration }}s). Enter seconds (e.g. 5 or 7.5).</p>
             <div class="photos-grid">
                 {% for photo in photos %}
                 <div class="photo-card">
