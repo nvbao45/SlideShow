@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            margin-bottom: 30px;
+            color: #333;
+        }
+        
+        .nav-links {
+            margin-bottom: 30px;
+        }
+        
+        .nav-links a {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        
+        .nav-links a:hover {
+            background-color: #0056b3;
+        }
+        
+        .upload-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .upload-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        
+        input[type="file"] {
+            padding: 10px;
+            border: 2px dashed #007bff;
+            border-radius: 5px;
+            width: 100%;
+            cursor: pointer;
+        }
+        
+        button[type="submit"] {
+            padding: 12px 30px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            align-self: flex-start;
+        }
+        
+        button[type="submit"]:hover {
+            background-color: #218838;
+        }
+        
+        .flash-messages {
+            margin-bottom: 20px;
+        }
+        
+        .alert {
+            padding: 12px 20px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .photos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .photo-card {
+            position: relative;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+            transition: transform 0.2s;
+        }
+        
+        .photo-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .photo-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+        }
+        
+        .photo-info {
+            padding: 10px;
+        }
+        
+        .photo-name {
+            font-size: 14px;
+            color: #333;
+            word-break: break-all;
+            margin-bottom: 10px;
+        }
+        
+        .delete-btn {
+            width: 100%;
+            padding: 8px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
+        
+        .no-photos {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .stats {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📸 Photo Management</h1>
+        
+        <div class="nav-links">
+            <a href="/">View Slideshow</a>
+        </div>
+        
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for message in messages %}
+                        <div class="alert alert-success">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        <div class="upload-section">
+            <h2>Upload Photos</h2>
+            <form action="/upload" method="post" enctype="multipart/form-data" class="upload-form">
+                <input type="file" name="files[]" multiple accept="image/*" required>
+                <button type="submit">Upload Photos</button>
+            </form>
+        </div>
+        
+        <div class="stats">
+            <strong>Total Photos:</strong> {{ photos|length }}<br>
+            <strong>Default Duration (seconds):</strong> {{ default_duration }}
+        </div>
+        
+        {% if photos %}
+        <form action="/durations" method="post" style="margin-bottom:30px">
+            <h2>Per-Image Durations (seconds)</h2>
+            <p style="font-size:14px;color:#555">Leave blank (or &lt;=0) to use default ({{ default_duration }}s). Enter seconds (e.g. 5 or 7.5). Then click Save Durations below.</p>
+            <div class="photos-grid">
+                {% for photo in photos %}
+                <div class="photo-card">
+                    <img src="/photos/{{ photo }}" alt="{{ photo }}">
+                    <div class="photo-info">
+                        <div class="photo-name">{{ photo }}</div>
+                        <label style="display:block;font-size:12px;color:#333;margin-bottom:6px">Duration (s):
+                            <input type="number" step="0.1" min="0" name="durations[{{ photo }}]" value="{{ '%.2f' % durations.get(photo) if durations.get(photo) is not none else '' }}" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px" />
+                        </label>
+                        <button type="button" class="delete-btn" onclick="deletePhoto('{{ photo }}')">Delete</button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div style="margin-top:20px">
+                <button type="submit" style="background:#0069d9">Save Durations</button>
+            </div>
+        </form>
+        {% else %}
+            <div class="no-photos">
+                <p>No photos uploaded yet. Upload some photos to get started!</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <script>
+        function deletePhoto(filename) {
+            if (!confirm(`Are you sure you want to delete "${filename}"?`)) {
+                return;
+            }
+            
+            fetch(`/delete/${filename}`, {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Error deleting file: ' + error);
+            });
+        }
+    </script>
+</body>
+</html>

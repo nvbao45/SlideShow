@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Slideshow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: #000;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        
+        .slideshow-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+            display: flex;
+        }
+        
+        .slide.active {
+            opacity: 1;
+            z-index: 1;
+        }
+        
+        .slide img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .controls.visible {
+            opacity: 1;
+        }
+        
+        button {
+            background-color: rgba(255, 255, 255, 0.8);
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: rgba(255, 255, 255, 1);
+        }
+        
+        .counter {
+            display: none;
+        }
+        
+        .message {
+            color: white;
+            font-size: 24px;
+            text-align: center;
+        }
+        
+        body.hide-cursor, .slideshow-container.hide-cursor {
+            cursor: none;
+        }
+    </style>
+</head>
+<body data-default-duration="{{ (default_duration * 1000)|int }}">
+    <div class="slideshow-container">
+        {% if photos %}
+            <div class="counter">
+                <span id="currentSlide">1</span> / <span id="totalSlides">{{ photos|length }}</span>
+            </div>
+            
+            {% for photo in photos %}
+            <div class="slide {% if loop.first %}active{% endif %}" data-duration="{{ (durations.get(photo) if durations.get(photo) is not none else default_duration) * 1000 }}">
+                <img src="/photos/{{ photo }}" alt="{{ photo }}">
+            </div>
+            {% endfor %}
+            
+            <div class="controls">
+                <button onclick="changeSlide(-1)">❮ Previous</button>
+                <button id="playPauseBtn" onclick="togglePlayPause()">⏸ Pause</button>
+                <button onclick="changeSlide(1)">Next ❯</button>
+            </div>
+        {% else %}
+            <div class="message">
+                No photos found in the photos folder.
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        let autoPlay = true;
+        let nextTimeoutId = null;
+        const DEFAULT_DURATION_MS = parseInt(document.body.getAttribute('data-default-duration'), 10);
+        const controls = document.querySelector('.controls');
+        const container = document.querySelector('.slideshow-container');
+        let hideControlsTimeout = null;
+        let hideCursorTimeout = null;
+        const HIDE_DELAY = 2000; // ms
+
+        function activityDetected() {
+            // Hiện controls
+            if (controls) {
+                controls.classList.add('visible');
+                if (hideControlsTimeout) clearTimeout(hideControlsTimeout);
+                hideControlsTimeout = setTimeout(() => {
+                    controls.classList.remove('visible');
+                }, HIDE_DELAY);
+            }
+            // Hiện lại con trỏ
+            document.body.classList.remove('hide-cursor');
+            container && container.classList.remove('hide-cursor');
+            if (hideCursorTimeout) clearTimeout(hideCursorTimeout);
+            hideCursorTimeout = setTimeout(() => {
+                document.body.classList.add('hide-cursor');
+                container && container.classList.add('hide-cursor');
+            }, HIDE_DELAY);
+        }
+
+        function showSlide(index) {
+            slides.forEach(slide => slide.classList.remove('active'));
+            
+            if (index >= totalSlides) {
+                currentSlide = 0;
+            } else if (index < 0) {
+                currentSlide = totalSlides - 1;
+            } else {
+                currentSlide = index;
+            }
+            
+            slides[currentSlide].classList.add('active');
+            document.getElementById('currentSlide').textContent = currentSlide + 1;
+        }
+
+        function changeSlide(direction) {
+            showSlide(currentSlide + direction);
+            scheduleNext();
+            activityDetected();
+        }
+
+        function togglePlayPause() {
+            autoPlay = !autoPlay;
+            const btn = document.getElementById('playPauseBtn');
+            
+            if (autoPlay) {
+                btn.textContent = '⏸ Pause';
+                scheduleNext();
+            } else {
+                btn.textContent = '▶ Play';
+                cancelNext();
+            }
+            activityDetected();
+        }
+
+        function cancelNext() {
+            if (nextTimeoutId) {
+                clearTimeout(nextTimeoutId);
+                nextTimeoutId = null;
+            }
+        }
+
+        function scheduleNext() {
+            cancelNext();
+            if (!autoPlay || totalSlides === 0) return;
+            const active = slides[currentSlide];
+            let durationMs = parseInt(active.getAttribute('data-duration'), 10);
+            if (isNaN(durationMs) || durationMs <= 0) {
+                durationMs = DEFAULT_DURATION_MS;
+            }
+            nextTimeoutId = setTimeout(() => {
+                changeSlide(1);
+            }, durationMs);
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                changeSlide(-1);
+            } else if (e.key === 'ArrowRight') {
+                changeSlide(1);
+            } else if (e.key === ' ') {
+                e.preventDefault();
+                togglePlayPause();
+            }
+        });
+
+        // Mouse move hiển thị nút
+        if (container) {
+            container.addEventListener('mousemove', activityDetected);
+        }
+
+        // Start auto-play nếu có ảnh
+        if (totalSlides > 0) {
+            scheduleNext();
+        }
+
+        // Ẩn nút ban đầu
+        if (controls) {
+            controls.classList.remove('visible');
+        }
+        // Khởi tạo ẩn con trỏ sau delay ban đầu
+        hideCursorTimeout = setTimeout(() => {
+            document.body.classList.add('hide-cursor');
+            container && container.classList.add('hide-cursor');
+        }, HIDE_DELAY);
+    </script>
+</body>
+</html>
