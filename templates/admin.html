@@ -33,9 +33,12 @@
         
         .nav-links {
             margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
-        .nav-links a {
+        .nav-links a, .nav-links button {
             display: inline-block;
             padding: 10px 20px;
             background-color: #007bff;
@@ -43,10 +46,22 @@
             text-decoration: none;
             border-radius: 5px;
             margin-right: 10px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
         }
         
-        .nav-links a:hover {
+        .nav-links a:hover, .nav-links button:hover {
             background-color: #0056b3;
+        }
+        
+        .logout-button {
+            background-color: #dc3545 !important;
+            margin-right: 0 !important;
+        }
+        
+        .logout-button:hover {
+            background-color: #c82333 !important;
         }
         
         .upload-section {
@@ -106,6 +121,32 @@
             border: 1px solid #c3e6cb;
         }
         
+        .per-image-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .per-image-section h3 {
+            color: #333;
+            margin: 0 0 10px 0;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .per-image-section > p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+            padding: 12px;
+            background: white;
+            border-left: 4px solid #667eea;
+            border-radius: 4px;
+        }
+        
         .photos-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -114,16 +155,17 @@
         
         .photo-card {
             position: relative;
-            border: 1px solid #ddd;
-            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
             overflow: hidden;
             background: white;
-            transition: transform 0.2s;
+            transition: all 0.3s;
         }
         
         .photo-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            border-color: #667eea;
         }
         
         .photo-card img {
@@ -131,32 +173,141 @@
             height: 200px;
             object-fit: cover;
             display: block;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        .photo-card img:hover {
+            transform: scale(1.05);
         }
         
         .photo-info {
-            padding: 10px;
+            padding: 15px;
         }
         
         .photo-name {
-            font-size: 14px;
+            font-size: 13px;
             color: #333;
             word-break: break-all;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+            font-weight: 500;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 36px;
+        }
+        
+        .duration-input-group {
+            margin-bottom: 12px;
+        }
+        
+        .duration-input-group label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        
+        .duration-input-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .duration-input-group input:focus {
+            outline: none;
+            border-color: #667eea;
         }
         
         .delete-btn {
             width: 100%;
-            padding: 8px;
-            background-color: #dc3545;
+            padding: 10px;
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
         }
         
         .delete-btn:hover {
-            background-color: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3);
+        }
+        
+        .delete-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 90%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: zoomIn 0.3s;
+        }
+        
+        @keyframes zoomIn {
+            from { transform: translate(-50%, -50%) scale(0.5); }
+            to { transform: translate(-50%, -50%) scale(1); }
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        
+        .modal-close:hover,
+        .modal-close:focus {
+            color: #bbb;
+        }
+        
+        .modal-caption {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ccc;
+            font-size: 16px;
+            text-align: center;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 5px;
         }
         
         .no-photos {
@@ -172,6 +323,83 @@
             border-radius: 5px;
             color: #495057;
         }
+        
+        .default-duration-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .default-duration-section h2 {
+            color: white;
+            margin: 0 0 20px 0;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .duration-control {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .duration-control label {
+            font-size: 15px;
+            color: #333;
+            font-weight: 500;
+            margin: 0;
+        }
+        
+        .duration-control input {
+            width: 120px;
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .duration-control input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .duration-control small {
+            color: #666;
+            font-size: 13px;
+            flex-basis: 100%;
+            margin-top: 5px;
+        }
+        
+        .save-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+        }
+        
+        .save-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .save-button:active {
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body>
@@ -179,7 +407,12 @@
         <h1>📸 Photo Management</h1>
         
         <div class="nav-links">
-            <a href="/">View Slideshow</a>
+            <div>
+                <a href="/">View Slideshow</a>
+            </div>
+            <div>
+                <a href="{{ url_for('logout') }}" class="logout-button">🚪 Logout</a>
+            </div>
         </div>
         
         {% with messages = get_flashed_messages() %}
@@ -206,33 +439,36 @@
         </div>
         
         {% if photos %}
-        <form action="/durations" method="post" style="margin-bottom:30px">
-            <h2>Duration Settings</h2>
-            <fieldset style="border:1px solid #ddd;padding:15px;margin-bottom:20px;border-radius:6px">
-                <legend style="font-weight:bold;padding:0 8px">Default Duration</legend>
-                <label style="display:block;font-size:14px;color:#333;margin-bottom:8px">Default duration for images (seconds):
-                    <input type="number" step="0.1" min="0.1" name="default_duration" value="{{ '%.2f' % default_duration }}" style="width:200px;padding:6px;border:1px solid #ccc;border-radius:4px" />
-                </label>
-                <small style="color:#666">Applied to any image without a custom duration (must be &gt; 0).</small>
-            </fieldset>
-            <h3 style="margin-top:0">Per-Image Overrides</h3>
-            <p style="font-size:14px;color:#555">Leave blank (or &lt;=0) to fall back to default ({{ default_duration }}s). Enter seconds (e.g. 5 or 7.5).</p>
-            <div class="photos-grid">
-                {% for photo in photos %}
-                <div class="photo-card">
-                    <img src="/photos/{{ photo }}" alt="{{ photo }}">
-                    <div class="photo-info">
-                        <div class="photo-name">{{ photo }}</div>
-                        <label style="display:block;font-size:12px;color:#333;margin-bottom:6px">Duration (s):
-                            <input type="number" step="0.1" min="0" name="durations[{{ photo }}]" value="{{ '%.2f' % durations.get(photo) if durations.get(photo) is not none else '' }}" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px" />
-                        </label>
-                        <button type="button" class="delete-btn" onclick="deletePhoto('{{ photo }}')">Delete</button>
-                    </div>
+        <form action="/durations" method="post">
+            <div class="default-duration-section">
+                <h2>⏱️ Default Duration</h2>
+                <div class="duration-control">
+                    <label for="default_duration">Duration for all images (seconds):</label>
+                    <input type="number" step="0.1" min="0.1" id="default_duration" name="default_duration" value="{{ '%.2f' % default_duration }}" />
+                    <small>ℹ️ Applied to any image without a custom duration (must be &gt; 0)</small>
                 </div>
-                {% endfor %}
             </div>
-            <div style="margin-top:20px">
-                <button type="submit" style="background:#0069d9">Save Durations</button>
+            <div class="per-image-section">
+                <h3>🖼️ Per-Image Overrides</h3>
+                <p>👉 Leave blank (or &lt;=0) to use default duration ({{ default_duration }}s). Enter custom seconds (e.g. 5 or 7.5). <strong>Click image to view full size.</strong></p>
+                <div class="photos-grid">
+                    {% for photo in photos %}
+                    <div class="photo-card">
+                        <img src="/photos/{{ photo }}" alt="{{ photo }}" onclick="openModal('/photos/{{ photo }}', '{{ photo }}')">
+                        <div class="photo-info">
+                            <div class="photo-name" title="{{ photo }}">{{ photo }}</div>
+                            <div class="duration-input-group">
+                                <label>⏱️ Custom Duration (seconds)</label>
+                                <input type="number" step="0.1" min="0" name="durations[{{ photo }}]" value="{{ '%.2f' % durations.get(photo) if durations.get(photo) is not none else '' }}" placeholder="{{ default_duration }}" />
+                            </div>
+                            <button type="button" class="delete-btn" onclick="deletePhoto('{{ photo }}')">🗑️ Delete</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div style="margin-top:25px;text-align:center">
+                <button type="submit" class="save-button">💾 Save All Duration Settings</button>
             </div>
         </form>
         {% else %}
@@ -242,7 +478,35 @@
         {% endif %}
     </div>
     
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal" onclick="closeModal()">
+        <span class="modal-close" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="modalImage">
+        <div class="modal-caption" id="modalCaption"></div>
+    </div>
+
     <script>
+        function openModal(imageSrc, imageName) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            const caption = document.getElementById('modalCaption');
+            
+            modal.style.display = 'block';
+            modalImg.src = imageSrc;
+            caption.textContent = imageName;
+        }
+        
+        function closeModal() {
+            document.getElementById('imageModal').style.display = 'none';
+        }
+        
+        // Close modal with ESC key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
+        
         function deletePhoto(filename) {
             if (!confirm(`Are you sure you want to delete "${filename}"?`)) {
                 return;

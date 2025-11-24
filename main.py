@@ -1,13 +1,37 @@
 #!/usr/bin/env python3
-from flask import Flask, render_template, send_from_directory, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, send_from_directory, request, redirect, url_for, flash, jsonify, session
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import os
 import json
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='/static')
 app.secret_key = 'your-secret-key-change-this-in-production'
 
+# Configure Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Please log in to access this page.'
+
+# User class for Flask-Login
+class User(UserMixin):
+    def __init__(self, id):
+        self.id = id
+
+# Default admin account (should be changed in production)
+ADMIN_USERNAME = 'admin'
+ADMIN_PASSWORD_HASH = generate_password_hash('admin123')  # Password: admin123
+
+@login_manager.user_loader
+def load_user(user_id):
+    if user_id == ADMIN_USERNAME:
+        return User(user_id)
+    return None
+
 PHOTOS_FOLDER = 'photos'
+STATIC_FOLDER = 'static'
 DURATIONS_FILE = 'durations.json'
 DEFAULT_DURATION_SECONDS = 8  # fallback default display time per image if not configured
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
@@ -70,7 +94,34 @@ def index():
     default_duration = load_default_duration()
     return render_template('index.html', photos=photos, durations=durations, default_duration=default_duration)
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('admin'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if username == ADMIN_USERNAME and check_password_hash(ADMIN_PASSWORD_HASH, password):
+            user = User(username)
+            login_user(user)
+            next_page = request.args.get('next')
+            return redirect(next_page or url_for('admin'))
+        else:
+            flash('Invalid username or password!')
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('Logged out successfully!')
+    return redirect(url_for('index'))
+
 @app.route('/admin')
+@login_required
 def admin():
     photos = get_photos()
     durations = load_durations()
@@ -78,6 +129,7 @@ def admin():
     return render_template('admin.html', photos=photos, durations=durations, default_duration=default_duration)
 
 @app.route('/upload', methods=['POST'])
+@login_required
 def upload_file():
     if 'files[]' not in request.files:
         flash('No file part')
@@ -85,17 +137,38 @@ def upload_file():
     
     files = request.files.getlist('files[]')
     uploaded_count = 0
-    
+    renamed_count = 0
+
     for file in files:
         if file and file.filename and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
+            original_filename = secure_filename(file.filename)
+            filename = original_filename
+            target_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            if os.path.exists(target_path):
+                base, ext = os.path.splitext(filename)
+                counter = 1
+                while True:
+                    candidate = f"{base}-{counter}{ext}"
+                    candidate_path = os.path.join(app.config['UPLOAD_FOLDER'], candidate)
+                    if not os.path.exists(candidate_path):
+                        filename = candidate
+                        renamed_count += 1
+                        break
+                    counter += 1
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             uploaded_count += 1
-    
-    flash(f'Successfully uploaded {uploaded_count} file(s)')
+
+    if uploaded_count == 0:
+        flash('No valid files uploaded')
+    else:
+        if renamed_count:
+            flash(f'Uploaded {uploaded_count} file(s). {renamed_count} duplicate name(s) were auto-renamed.')
+        else:
+            flash(f'Uploaded {uploaded_count} file(s).')
     return redirect(url_for('admin'))
 
 @app.route('/durations', methods=['POST'])
+@login_required
 def update_durations():
     photos = set(get_photos())
     durations = load_durations()
@@ -136,6 +209,7 @@ def update_durations():
     return redirect(url_for('admin'))
 
 @app.route('/delete/<filename>', methods=['POST'])
+@login_required
 def delete_file(filename):
     try:
         filepath = os.path.join(PHOTOS_FOLDER, secure_filename(filename))
