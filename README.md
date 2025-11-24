@@ -3,7 +3,7 @@
 ## Overview
 SlideShow is a lightweight Flask web application for displaying a full-screen photo slideshow with per-image configurable display durations. An admin interface lets you upload, delete, and set custom durations for each image, as well as a global default duration stored in `durations.json`.
 
-![Admin Interface](img/image.png)
+![Admin Interface](imgs/image.png)
 
 ## Features
 - Simple responsive slideshow at `/`
