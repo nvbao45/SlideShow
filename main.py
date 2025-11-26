@@ -33,6 +33,7 @@ def load_user(user_id):
 PHOTOS_FOLDER = 'photos'
 STATIC_FOLDER = 'static'
 DURATIONS_FILE = 'durations.json'
+DISABLED_PHOTOS_FILE = 'disabled_photos.json'
 DEFAULT_DURATION_SECONDS = 8  # fallback default display time per image if not configured
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
 
@@ -87,9 +88,32 @@ def load_default_duration():
     except Exception:
         return DEFAULT_DURATION_SECONDS
 
+def load_disabled_photos():
+    if not os.path.exists(DISABLED_PHOTOS_FILE):
+        return set()
+    try:
+        with open(DISABLED_PHOTOS_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            if isinstance(data, list):
+                return set(data)
+            return set()
+    except Exception:
+        return set()
+
+def save_disabled_photos(disabled_set):
+    try:
+        with open(DISABLED_PHOTOS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(list(disabled_set), f, ensure_ascii=False, indent=2)
+        return True
+    except Exception:
+        return False
+
 @app.route('/')
 def index():
-    photos = get_photos()
+    all_photos = get_photos()
+    disabled_photos = load_disabled_photos()
+    # Filter out disabled photos from slideshow
+    photos = [p for p in all_photos if p not in disabled_photos]
     durations = load_durations()
     default_duration = load_default_duration()
     return render_template('index.html', photos=photos, durations=durations, default_duration=default_duration)
@@ -126,7 +150,8 @@ def admin():
     photos = get_photos()
     durations = load_durations()
     default_duration = load_default_duration()
-    return render_template('admin.html', photos=photos, durations=durations, default_duration=default_duration)
+    disabled_photos = load_disabled_photos()
+    return render_template('admin.html', photos=photos, durations=durations, default_duration=default_duration, disabled_photos=disabled_photos)
 
 @app.route('/upload', methods=['POST'])
 @login_required
@@ -208,6 +233,27 @@ def update_durations():
         flash('Failed to save durations')
     return redirect(url_for('admin'))
 
+@app.route('/toggle/<filename>', methods=['POST'])
+@login_required
+def toggle_photo(filename):
+    try:
+        filename = secure_filename(filename)
+        disabled_photos = load_disabled_photos()
+        
+        if filename in disabled_photos:
+            disabled_photos.remove(filename)
+            status = 'enabled'
+        else:
+            disabled_photos.add(filename)
+            status = 'disabled'
+        
+        if save_disabled_photos(disabled_photos):
+            return jsonify({'success': True, 'status': status, 'message': f'Photo {status} successfully'})
+        else:
+            return jsonify({'success': False, 'message': 'Failed to save changes'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @app.route('/delete/<filename>', methods=['POST'])
 @login_required
 def delete_file(filename):
@@ -215,6 +261,11 @@ def delete_file(filename):
         filepath = os.path.join(PHOTOS_FOLDER, secure_filename(filename))
         if os.path.exists(filepath):
             os.remove(filepath)
+            # Also remove from disabled list if present
+            disabled_photos = load_disabled_photos()
+            if filename in disabled_photos:
+                disabled_photos.remove(filename)
+                save_disabled_photos(disabled_photos)
             return jsonify({'success': True, 'message': 'File deleted successfully'})
         else:
             return jsonify({'success': False, 'message': 'File not found'}), 404
